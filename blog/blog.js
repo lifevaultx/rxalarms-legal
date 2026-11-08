@@ -51,8 +51,8 @@
     if (!res.ok) {
       throw new Error("HeyCatch API error " + res.status);
     }
-    var article = await res.json();
-    return { article: article, notFound: false };
+    var data = await res.json();
+    return { article: data.article, notFound: false };
   }
 
   function formatDate(iso) {
