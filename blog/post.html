@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title id="page-title">Blog | RxAlarms</title>
+<meta id="page-description" name="description" content="RxAlarms blog.">
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; max-width: 680px; margin: 60px auto; padding: 0 20px; line-height: 1.65; color: #1a1a1a; }
+  h1 { font-size: 30px; line-height: 1.25; margin-bottom: 8px; }
+  h2 { font-size: 21px; margin-top: 40px; }
+  p { font-size: 16px; color: #2a2a2a; }
+  .byline { color: #666; font-size: 14px; margin-bottom: 32px; }
+  .cta { margin-top: 48px; padding: 24px; background: #f4f8ff; border-radius: 14px; text-align: center; }
+  .cta p { margin-top: 0; }
+  a.btn { display: inline-block; padding: 12px 24px; border-radius: 10px; background: #0a6cff; color: #fff; text-decoration: none; font-weight: 600; margin-top: 8px; }
+  a.link { color: #0a6cff; }
+  .back { display: block; margin-top: 40px; font-size: 14px; }
+  footer { margin-top: 60px; font-size: 13px; color: #888; text-align: center; }
+  #content img { max-width: 100%; height: auto; border-radius: 8px; }
+  #content table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+  #content th, #content td { border: 1px solid #e3e3e3; padding: 8px 12px; text-align: left; font-size: 15px; }
+  .state { color: #666; font-size: 15px; }
+</style>
+</head>
+<body>
+<div id="post">
+  <p class="state">Loading article&hellip;</p>
+</div>
+
+<div class="cta">
+  <h2 style="margin-top:0;">If you're managing medications for yourself or a family member</h2>
+  <p>Just snap a photo of a pill bottle or prescription, or upload a picture or document of one &mdash; RxAlarms reads it automatically and fills in all the details. No typing needed. Hands full? Just speak the medication out loud instead.</p>
+  <a class="btn" href="https://apps.apple.com/app/id6809214908" target="_blank" rel="noopener">Try RxAlarms free</a>
+</div>
+
+<a class="back link" href="./index.html">&larr; Back to the RxAlarms Blog</a>
+
+<footer>&copy; RxAlarms &middot; <a class="link" href="../privacy.html">Privacy Policy</a> &middot; <a class="link" href="../terms.html">Terms of Use</a></footer>
+
+<script src="./config.js"></script>
+<script src="./blog.js"></script>
+<script>
+  (async function () {
+    var container = document.getElementById("post");
+    var params = new URLSearchParams(window.location.search);
+    var slug = params.get("slug");
+
+    if (!slug) {
+      container.innerHTML = '<p class="state">No article specified.</p>';
+      return;
+    }
+
+    try {
+      var result = await window.HeyCatchBlog.getArticle(slug);
+      if (result.notFound || !result.article) {
+        container.innerHTML = '<p class="state">That article couldn\'t be found.</p>';
+        return;
+      }
+      var a = result.article;
+      var title = window.HeyCatchBlog.escapeHtml(a.title);
+      document.getElementById("page-title").textContent = a.title + " | RxAlarms";
+      if (a.meta_description) {
+        document.getElementById("page-description").setAttribute("content", a.meta_description);
+      }
+      var date = window.HeyCatchBlog.formatDate(a.published);
+      var readTime = a.read_time ? a.read_time + " min read" : "";
+      var meta = [date, readTime].filter(Boolean).join(" &middot; ");
+      container.innerHTML =
+        '<h1>' + title + '</h1>' +
+        '<p class="byline">' + meta + '</p>' +
+        '<div id="content">' + (a.content_html || "") + '</div>';
+    } catch (err) {
+      console.error(err);
+      container.innerHTML = '<p class="state">Couldn\'t load this article right now. Please try again later.</p>';
+    }
+  })();
+</script>
+</body>
+</html>

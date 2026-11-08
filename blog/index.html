@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blog | RxAlarms</title>
+<meta name="description" content="Tips and guides on medication reminders, refill tracking, and staying on top of your prescriptions.">
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; max-width: 680px; margin: 60px auto; padding: 0 20px; line-height: 1.65; color: #1a1a1a; }
+  h1 { font-size: 30px; line-height: 1.25; margin-bottom: 8px; }
+  p { font-size: 16px; color: #2a2a2a; }
+  .byline { color: #666; font-size: 14px; margin-bottom: 32px; }
+  a.link { color: #0a6cff; text-decoration: none; }
+  a.link:hover { text-decoration: underline; }
+  .back { display: block; margin-top: 40px; font-size: 14px; }
+  footer { margin-top: 60px; font-size: 13px; color: #888; text-align: center; }
+  .post-card { padding: 20px 0; border-bottom: 1px solid #eee; }
+  .post-card:last-child { border-bottom: none; }
+  .post-card h2 { font-size: 20px; margin: 0 0 6px; }
+  .post-card h2 a { color: #1a1a1a; text-decoration: none; }
+  .post-card h2 a:hover { color: #0a6cff; }
+  .post-meta { color: #888; font-size: 13px; margin-bottom: 8px; }
+  .post-excerpt { color: #444; font-size: 15px; margin: 0; }
+  .state { color: #666; font-size: 15px; }
+</style>
+</head>
+<body>
+<h1>RxAlarms Blog</h1>
+<p class="byline">Tips and guides on medication reminders and staying on schedule.</p>
+
+<div id="posts">
+  <p class="state">Loading articles&hellip;</p>
+</div>
+
+<a class="back link" href="../index.html">&larr; Back to RxAlarms Support</a>
+
+<footer>&copy; RxAlarms &middot; <a class="link" href="../privacy.html">Privacy Policy</a> &middot; <a class="link" href="../terms.html">Terms of Use</a></footer>
+
+<script src="./config.js"></script>
+<script src="./blog.js"></script>
+<script>
+  (async function () {
+    var container = document.getElementById("posts");
+    try {
+      var articles = await window.HeyCatchBlog.listArticles();
+      if (!articles.length) {
+        container.innerHTML = '<p class="state">New articles are on their way &mdash; check back soon.</p>';
+        return;
+      }
+      articles.sort(function (a, b) {
+        return new Date(b.published || 0) - new Date(a.published || 0);
+      });
+      container.innerHTML = articles.map(function (a) {
+        var title = window.HeyCatchBlog.escapeHtml(a.title);
+        var slug = encodeURIComponent(a.slug);
+        var date = window.HeyCatchBlog.formatDate(a.published);
+        var readTime = a.read_time ? a.read_time + " min read" : "";
+        var meta = [date, readTime].filter(Boolean).join(" &middot; ");
+        var excerpt = window.HeyCatchBlog.escapeHtml(a.meta_description || "");
+        return '<div class="post-card">' +
+          '<h2><a href="./post.html?slug=' + slug + '">' + title + '</a></h2>' +
+          '<div class="post-meta">' + meta + '</div>' +
+          '<p class="post-excerpt">' + excerpt + '</p>' +
+          '</div>';
+      }).join("");
+    } catch (err) {
+      console.error(err);
+      container.innerHTML = '<p class="state">Couldn\'t load articles right now. Please try again later.</p>';
+    }
+  })();
+</script>
+</body>
+</html>
