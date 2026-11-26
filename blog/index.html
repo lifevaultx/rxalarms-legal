@@ -55,10 +55,24 @@
   <p class="state">Loading articles&hellip;</p>
 </div>
 
-<hr style="margin: 48px 0; border: none; border-top: 1px solid #eee;">
-
+<!--
+  Soro's embed widget still owns rendering a single article's full body (so Soro-hosted
+  content, formatting, and its own SEO meta/JSON-LD injection keep working) whenever the
+  page is opened with ?post=<soro-slug>. On the plain list view it's hidden by the script
+  below, because the merged list above already includes Soro's articles inline with
+  HeyCatch's -- we don't want Soro's own card list rendered a second time underneath.
+-->
 <div id="soro-blog"></div>
 <script src="https://app.trysoro.com/api/embed/ed79673c-b003-4c24-97d1-fbaeaea90a53" defer></script>
+<script defer>
+  (function () {
+    var hasPost = new URL(window.location.href).searchParams.get('post');
+    if (!hasPost) {
+      var el = document.getElementById('soro-blog');
+      if (el) el.style.display = 'none';
+    }
+  })();
+</script>
 
 <a class="back link" href="../index.html">&larr; Back to RxAlarms Support</a>
 
@@ -67,28 +81,90 @@
 <script src="./config.js"></script>
 <script src="./blog.js?v=2"></script>
 <script>
+  // Merges HeyCatch's article feed and Soro's article feed into a single list, sorted by
+  // publish date (newest first) regardless of which tool produced the article.
   (async function () {
     var container = document.getElementById("posts");
+
+    var SORO_EMBED_URL = "https://app.trysoro.com/api/embed/ed79673c-b003-4c24-97d1-fbaeaea90a53";
+
+    function escapeHtml(str) {
+      return String(str || "").replace(/[&<>"']/g, function (c) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+      });
+    }
+
+    function formatDate(iso) {
+      if (!iso) return "";
+      try {
+        return new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+      } catch (e) {
+        return "";
+      }
+    }
+
+    async function loadHeyCatchPosts() {
+      try {
+        var articles = await window.HeyCatchBlog.listArticles();
+        return articles.map(function (a) {
+          return {
+            title: a.title,
+            excerpt: a.meta_description || "",
+            isoDate: a.published ? new Date(a.published).toISOString() : null,
+            readTime: a.read_time ? a.read_time + " min read" : "",
+            href: "./post.html?slug=" + encodeURIComponent(a.slug),
+            source: "heycatch"
+          };
+        });
+      } catch (err) {
+        console.error("HeyCatch load failed:", err);
+        return [];
+      }
+    }
+
+    async function loadSoroPosts() {
+      try {
+        var res = await fetch(SORO_EMBED_URL);
+        if (!res.ok) throw new Error("Soro embed fetch failed " + res.status);
+        var text = await res.text();
+        var match = text.match(/var SORO_ARTICLES\s*=\s*(\[[\s\S]*?\]);/);
+        if (!match) throw new Error("Could not find SORO_ARTICLES in embed script");
+        var articles = JSON.parse(match[1]);
+        return articles.map(function (a) {
+          return {
+            title: a.title,
+            excerpt: a.excerpt || "",
+            isoDate: a.isoDate || null,
+            readTime: "",
+            href: "./index.html?post=" + encodeURIComponent(a.slug),
+            source: "soro"
+          };
+        });
+      } catch (err) {
+        console.error("Soro load failed:", err);
+        return [];
+      }
+    }
+
     try {
-      var articles = await window.HeyCatchBlog.listArticles();
-      if (!articles.length) {
+      var results = await Promise.all([loadHeyCatchPosts(), loadSoroPosts()]);
+      var merged = results[0].concat(results[1]);
+
+      if (!merged.length) {
         container.innerHTML = '<p class="state">New articles are on their way &mdash; check back soon.</p>';
         return;
       }
-      articles.sort(function (a, b) {
-        return new Date(b.published || 0) - new Date(a.published || 0);
+
+      merged.sort(function (a, b) {
+        return new Date(b.isoDate || 0) - new Date(a.isoDate || 0);
       });
-      container.innerHTML = articles.map(function (a) {
-        var title = window.HeyCatchBlog.escapeHtml(a.title);
-        var slug = encodeURIComponent(a.slug);
-        var date = window.HeyCatchBlog.formatDate(a.published);
-        var readTime = a.read_time ? a.read_time + " min read" : "";
-        var meta = [date, readTime].filter(Boolean).join(" &middot; ");
-        var excerpt = window.HeyCatchBlog.escapeHtml(a.meta_description || "");
+
+      container.innerHTML = merged.map(function (p) {
+        var meta = [formatDate(p.isoDate), p.readTime].filter(Boolean).join(" &middot; ");
         return '<div class="post-card">' +
-          '<h2><a href="./post.html?slug=' + slug + '">' + title + '</a></h2>' +
+          '<h2><a href="' + p.href + '">' + escapeHtml(p.title) + '</a></h2>' +
           '<div class="post-meta">' + meta + '</div>' +
-          '<p class="post-excerpt">' + excerpt + '</p>' +
+          '<p class="post-excerpt">' + escapeHtml(p.excerpt) + '</p>' +
           '</div>';
       }).join("");
     } catch (err) {
