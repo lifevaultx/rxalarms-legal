@@ -67,9 +67,14 @@
 <script defer>
   (function () {
     var hasPost = new URL(window.location.href).searchParams.get('post');
-    if (!hasPost) {
-      var el = document.getElementById('soro-blog');
-      if (el) el.style.display = 'none';
+    var soroEl = document.getElementById('soro-blog');
+    var listEl = document.getElementById('posts');
+    if (hasPost) {
+      // Viewing a single Soro article: show only the article, not the full list above it.
+      if (listEl) listEl.style.display = 'none';
+    } else if (soroEl) {
+      // List view: Soro's own card list would duplicate what's already in the merged list.
+      soroEl.style.display = 'none';
     }
   })();
 </script>
